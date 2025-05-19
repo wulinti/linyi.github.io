@@ -1,0 +1,1185 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>探究物体沉浮的影响因素</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            font-family: '楷体', sans-serif;
+        }
+
+        body {
+            background-color: #e8f5ff;
+            margin: 20px;
+        }
+
+       .container {
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+
+       .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+       .experiment-box {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            margin-bottom: 30px;
+        }
+
+       .controls {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+       .control-group {
+            background: #f5f5f5;
+            padding: 15px;
+            border-radius: 8px;
+        }
+
+       .slider {
+            width: 100%;
+            margin: 10px 0;
+        }
+
+       .value-display {
+            font-weight: bold;
+        }
+
+       .object {
+            border-radius: 50%;
+            cursor: pointer;
+            transition: transform 0.3s;
+            position: absolute;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+            z-index: 10;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            text-shadow: 0 0 3px rgba(0, 0, 0, 0.5);
+        }
+
+       .object:hover {
+            transform: scale(1.1);
+        }
+
+       .glass-container {
+            height: 700px;
+            width: 100%;
+            position: relative;
+            margin: 30px 0;
+            border-radius: 12px;
+            overflow: hidden;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+            backdrop-filter: blur(5px);
+        }
+
+       .water {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 75%;
+            opacity: 0.9;
+            border-radius: 0 0 10px 10px;
+        }
+
+       .water-surface {
+            position: absolute;
+            bottom: 75%;
+            left: 0;
+            width: 100%;
+            height: 4px;
+            background: linear-gradient(to right, #ffffff 20%, #ffffff80 50%, #ffffff 80%);
+            box-shadow: 0 0 15px rgba(255, 255, 255, 0.7);
+            z-index: 5;
+        }
+
+       .water-bottom {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 30px;
+            border-radius: 0 0 10px 10px;
+            z-index: 5;
+        }
+
+       .ripple {
+            position: absolute;
+            border-radius: 50%;
+            background-color: rgba(255, 255, 255, 0.3);
+            transform: scale(0);
+            opacity: 1;
+            animation: ripple 2s linear forwards;
+            z-index: 15;
+        }
+
+       .splash {
+            position: absolute;
+            background-color: white;
+            border-radius: 50%;
+            opacity: 0;
+            z-index: 15;
+        }
+
+        @keyframes fallToMiddle {
+            0% {
+                transform: translateY(-100px);
+                opacity: 0;
+            }
+
+            100% {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+
+        @keyframes sinkToBottom {
+            0% {
+                transform: translateY(0);
+            }
+
+            100% {
+                transform: translateY(var(--sink-distance));
+            }
+        }
+
+        @keyframes floatToSurface {
+            0% {
+                transform: translateY(0);
+            }
+
+            100% {
+                transform: translateY(var(--float-distance));
+            }
+        }
+
+        @keyframes hoverAnimation {
+            0%,
+            100% {
+                transform: translateY(0);
+            }
+
+            50% {
+                transform: translateY(-10px);
+            }
+        }
+
+        @keyframes ripple {
+            to {
+                transform: scale(1);
+                opacity: 0;
+            }
+        }
+
+        @keyframes splash {
+            0% {
+                transform: translateY(0) scale(0.5);
+                opacity: 0.8;
+            }
+
+            50% {
+                transform: translateY(-60px) scale(1);
+                opacity: 0.5;
+            }
+
+            100% {
+                transform: translateY(-90px) scale(0.3);
+                opacity: 0;
+            }
+        }
+
+       .button {
+            text-align: center;
+            margin: 20px;
+        }
+
+        button {
+            padding: 10px 20px;
+            background-color: #2196F3;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+
+        button:hover {
+            background-color: #0d8bf2;
+        }
+
+       .result {
+            text-align: center;
+            font-size: 18px;
+            margin-top: 20px;
+            min-height: 50px;
+        }
+
+       .legend {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            margin-top: 10px;
+        }
+
+       .legend-item {
+            display: flex;
+            align-items: center;
+        }
+
+       .legend-color {
+            width: 15px;
+            height: 15px;
+            border-radius: 50%;
+            margin-right: 5px;
+        }
+
+       .record-table {
+            width: 100%;
+            margin-top: 20px;
+            border-collapse: collapse;
+        }
+
+       .record-table th,
+       .record-table td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: center;
+        }
+
+       .record-table th {
+            background-color: #f2f2f2;
+        }
+
+       .fill-blank {
+            margin-top: 20px;
+            text-align: center;
+            font-size: 18px;  /* 增大字体 */
+            letter-spacing: 1px;  /* 增大字间距 */
+        }
+
+       .judgment-correct {
+            color: green;
+            font-weight: bold;
+        }
+
+       .judgment-incorrect {
+            color: red;
+            font-weight: bold;
+        }
+
+       .record-hint {
+            color: orange;
+            margin-top: 5px;
+        }
+
+       .missing-field {
+            color: red;
+        }
+
+       .record-section {
+            margin-bottom: 40px;
+        }
+
+       .experiment-conclusion {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            margin-bottom: 30px;
+        }
+
+       .easter-egg {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            margin-bottom: 30px;
+        }
+
+       .science-principle,
+       .experiment-materials,
+       .experiment-steps {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            margin-bottom: 30px;
+        }
+
+       .experiment-steps li {
+            font-size: 18px;  /* 增大字体 */
+            letter-spacing: 1px;  /* 增大字间距 */
+        }
+
+       .agent-iframe-container {
+            position: fixed;
+            top: 50%;
+            right: 20px;
+            transform: translateY(-50%);
+            width: 300px;
+            height: 700px;
+            z-index: 999;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>探究物体沉浮的影响因素</h1>
+            <p>通过调整物体体积和质量，观察它们对沉浮的影响</p>
+        </div>
+        <div class="experiment-materials">
+            <h2>实验材料</h2>
+            <ul>
+                <li>可调节体积和质量的模拟球体</li>
+                <li>玻璃水槽（模拟水域）</li>
+            </ul>
+        </div>
+        <div class="experiment-steps">
+            <h2>实验步骤</h2>
+            <ol>
+                <li>调整下方滑块，设置每个球的体积和质量</li>
+                <li>选择液体（水、盐水、可乐或油）</li>
+                <li>预测每个球放入液体后是上浮、下沉还是悬浮</li>
+                <li>选择要记录的实验记录表</li>
+                <li>点击“放入水中”按钮观察结果</li>
+                <li>在所选的实验记录表格中记录每个球的质量、体积和沉浮状态</li>
+                <li>完成各实验记录单后的单选题</li>
+                <li>填写“实验结论”中的填空题</li>
+                <li>点击“检查答案”核对填写内容</li>
+                <li>点击“重置实验”可以重新开始</li>
+            </ol>
+        </div>
+        <div class="experiment-box">
+            <div class="controls">
+                <!-- 球1控制 -->
+                <div class="control-group">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <h3>球1</h3>
+                        <div class="legend-color" style="background-color: #ff5722;"></div>
+                    </div>
+                    <div>
+                        <label>体积 <span id="volume1" class="value-display">50</span> cm³</label>
+                        <input type="range" min="10" max="300" value="50" class="slider" id="volumeSlider1">
+                    </div>
+                    <div>
+                        <label>质量 <span id="mass1" class="value-display">100</span> g</label>
+                        <input type="range" min="10" max="300" value="100" class="slider" id="massSlider1">
+                    </div>
+                </div>
+                <!-- 球2控制 -->
+                <div class="control-group">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <h3>球2</h3>
+                        <div class="legend-color" style="background-color: #4CAF50;"></div>
+                    </div>
+                    <div>
+                        <label>体积 <span id="volume2" class="value-display">150</span> cm³</label>
+                        <input type="range" min="10" max="300" value="150" class="slider" id="volumeSlider2">
+                    </div>
+                    <div>
+                        <label>质量 <span id="mass2" class="value-display">100</span> g</label>
+                        <input type="range" min="10" max="300" value="100" class="slider" id="massSlider2">
+                    </div>
+                </div>
+                <!-- 球3控制 -->
+                <div class="control-group">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <h3>球3</h3>
+                        <div class="legend-color" style="background-color: #FFC107;"></div>
+                    </div>
+                    <div>
+                        <label>体积 <span id="volume3" class="value-display">250</span> cm³</label>
+                        <input type="range" min="10" max="300" value="250" class="slider" id="volumeSlider3">
+                    </div>
+                    <div>
+                        <label>质量 <span id="mass3" class="value-display">100</span> g</label>
+                        <input type="range" min="10" max="300" value="100" class="slider" id="massSlider3">
+                    </div>
+                </div>
+                <!-- 液体选择 -->
+                <div class="control-group">
+                    <h3>选择液体</h3>
+                    <input type="radio" name="liquidChoice" value="water" checked> 水
+                    <input type="radio" name="liquidChoice" value="saltwater"> 盐水
+                    <input type="radio" name="liquidChoice" value="cola"> 可乐
+                    <input type="radio" name="liquidChoice" value="oil"> 油
+                </div>
+            </div>
+            <div class="glass-container" id="water-container">
+                <div class="water" id="water-element"></div>
+                <div class="water-surface"></div>
+                <div class="water-bottom" id="water-bottom-element"></div>
+            </div>
+            <div class="legend">
+                <div class="legend-item"><div class="legend-color" style="background-color: #ff5722;"></div>球1</div>
+                <div class="legend-item"><div class="legend-color" style="background-color: #4CAF50;"></div>球2</div>
+                <div class="legend-item"><div class="legend-color" style="background-color: #FFC107;"></div>球3</div>
+            </div>
+            <div class="record-section">
+                <div>
+                    <input type="radio" name="recordChoice" value="record1" checked> 实验记录1
+                    <span class="record-hint">请尝试将三个球质量保持一致。</span>
+                </div>
+                <table class="record-table">
+                    <thead>
+                        <tr>
+                            <th>球</th>
+                            <th>质量 (g)</th>
+                            <th>体积 (cm³)</th>
+                            <th>是否漂浮</th>
+                            <th>判断结果</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>球1</td>
+                            <td><span id="record-mass1-span"></span></td>
+                            <td><span id="record-volume1-span"></span></td>
+                            <td>
+                                <input type="radio" name="float1-1" value="漂浮"> 漂浮
+                                <input type="radio" name="float1-1" value="悬浮"> 悬浮
+                                <input type="radio" name="float1-1" value="下沉"> 下沉
+                            </td>
+                            <td><span id="judgment1-1"></span></td>
+                        </tr>
+                        <tr>
+                            <td>球2</td>
+                            <td><span id="record-mass2-span"></span></td>
+                            <td><span id="record-volume2-span"></span></td>
+                            <td>
+                                <input type="radio" name="float2-1" value="漂浮"> 漂浮
+                                <input type="radio" name="float2-1" value="悬浮"> 悬浮
+                                <input type="radio" name="float2-1" value="下沉"> 下沉
+                            </td>
+                            <td><span id="judgment2-1"></span></td>
+                        </tr>
+                        <tr>
+                            <td>球3</td>
+                            <td><span id="record-mass3-span"></span></td>
+                            <td><span id="record-volume3-span"></span></td>
+                            <td>
+                                <input type="radio" name="float3-1" value="漂浮"> 漂浮
+                                <input type="radio" name="float3-1" value="悬浮"> 悬浮
+                                <input type="radio" name="float3-1" value="下沉"> 下沉
+                            </td>
+                            <td><span id="judgment3-1"></span></td>
+                        </tr>
+                    </tbody>
+                </table>
+                <div class="fill-blank">
+                    当质量一样，球的体积（ 
+                    <input type="radio" name="blank1" value="越大"> 越大 
+                    <input type="radio" name="blank1" value="越小"> 越小 
+                    ）就会更容易（ 
+                    <input type="radio" name="blank2" value="漂浮"> 漂浮 
+                    <input type="radio" name="blank2" value="下沉"> 下沉 
+                    ）
+                </div>
+            </div>
+            <div class="record-section">
+                <div>
+                    <input type="radio" name="recordChoice" value="record2"> 实验记录2
+                    <span class="record-hint">请尝试将三个球的体积保持一致。</span>
+                </div>
+                <table class="record-table">
+                    <thead>
+                        <tr>
+                            <th>球</th>
+                            <th>质量 (g)</th>
+                            <th>体积 (cm³)</th>
+                            <th>是否漂浮</th>
+                            <th>判断结果</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>球1</td>
+                            <td><span id="record-mass1-2-span"></span></td>
+                            <td><span id="record-volume1-2-span"></span></td>
+                            <td>
+                                <input type="radio" name="float1-2" value="漂浮"> 漂浮
+                                <input type="radio" name="float1-2" value="悬浮"> 悬浮
+                                <input type="radio" name="float1-2" value="下沉"> 下沉
+                            </td>
+                            <td><span id="judgment1-2"></span></td>
+                        </tr>
+                        <tr>
+                            <td>球2</td>
+                            <td><span id="record-mass2-2-span"></span></td>
+                            <td><span id="record-volume2-2-span"></span></td>
+                            <td>
+                                <input type="radio" name="float2-2" value="漂浮"> 漂浮
+                                <input type="radio" name="float2-2" value="悬浮"> 悬浮
+                                <input type="radio" name="float2-2" value="下沉"> 下沉
+                            </td>
+                            <td><span id="judgment2-2"></span></td>
+                        </tr>
+                        <tr>
+                            <td>球3</td>
+                            <td><span id="record-mass3-2-span"></span></td>
+                            <td><span id="record-volume3-2-span"></span></td>
+                            <td>
+                                <input type="radio" name="float3-2" value="漂浮"> 漂浮
+                                <input type="radio" name="float3-2" value="悬浮"> 悬浮
+                                <input type="radio" name="float3-2" value="下沉"> 下沉
+                            </td>
+                            <td><span id="judgment3-2"></span></td>
+                        </tr>
+                    </tbody>
+                </table>
+                <div class="fill-blank">
+                    当体积一样，球的质量（ 
+                    <input type="radio" name="blank3" value="越大"> 越大 
+                    <input type="radio" name="blank3" value="越小"> 越小 
+                    ）就会更容易（ 
+                    <input type="radio" name="blank4" value="漂浮"> 漂浮 
+                    <input type="radio" name="blank4" value="下沉"> 下沉 
+                    ）
+                </div>
+            </div>
+            <div class="record-section">
+                <div>
+                    <input type="radio" name="recordChoice" value="record3"> 实验记录3
+                    <span class="record-hint">只有球1能放入水中，需选中每行前面的按钮记录数据。</span>
+                </div>
+                <table class="record-table">
+                    <thead>
+                        <tr>
+                            <th></th>
+                            <th>液体</th>
+                            <th>球1质量 (g)</th>
+                            <th>球1体积 (cm³)</th>
+                            <th>是否漂浮</th>
+                            <th>判断结果</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><input type="radio" name="record3-liquid" value="water"></td>
+                            <td>水</td>
+                            <td><span id="record-mass1-3-water-span"></span></td>
+                            <td><span id="record-volume1-3-water-span"></span></td>
+                            <td>
+                                <input type="radio" name="float1-3-water" value="漂浮"> 漂浮
+                                <input type="radio" name="float1-3-water" value="悬浮"> 悬浮
+                                <input type="radio" name="float1-3-water" value="下沉"> 下沉
+                            </td>
+                            <td><span id="judgment1-3-water"></span></td>
+                        </tr>
+                        <tr>
+                            <td><input type="radio" name="record3-liquid" value="saltwater"></td>
+                            <td>盐水</td>
+                            <td><span id="record-mass1-3-saltwater-span"></span></td>
+                            <td><span id="record-volume1-3-saltwater-span"></span></td>
+                            <td>
+                                <input type="radio" name="float1-3-saltwater" value="漂浮"> 漂浮
+                                <input type="radio" name="float1-3-saltwater" value="悬浮"> 悬浮
+                                <input type="radio" name="float1-3-saltwater" value="下沉"> 下沉
+                            </td>
+                            <td><span id="judgment1-3-saltwater"></span></td>
+                        </tr>
+                        <tr>
+                            <td><input type="radio" name="record3-liquid" value="cola"></td>
+                            <td>可乐</td>
+                            <td><span id="record-mass1-3-cola-span"></span></td>
+                            <td><span id="record-volume1-3-cola-span"></span></td>
+                            <td>
+                                <input type="radio" name="float1-3-cola" value="漂浮"> 漂浮
+                                <input type="radio" name="float1-3-cola" value="悬浮"> 悬浮
+                                <input type="radio" name="float1-3-cola" value="下沉"> 下沉
+                            </td>
+                            <td><span id="judgment1-3-cola"></span></td>
+                        </tr>
+                        <tr>
+                            <td><input type="radio" name="record3-liquid" value="oil"></td>
+                            <td>油</td>
+                            <td><span id="record-mass1-3-oil-span"></span></td>
+                            <td><span id="record-volume1-3-oil-span"></span></td>
+                            <td>
+                                <input type="radio" name="float1-3-oil" value="漂浮"> 漂浮
+                                <input type="radio" name="float1-3-oil" value="悬浮"> 悬浮
+                                <input type="radio" name="float1-3-oil" value="下沉"> 下沉
+                            </td>
+                            <td><span id="judgment1-3-oil"></span></td>
+                        </tr>
+                    </tbody>
+                </table>
+                <div class="fill-blank">
+                    同一个小球，不同液体（ 
+                    <input type="radio" name="blank9" value="会"> 会 
+                    <input type="radio" name="blank9" value="不会"> 不会 
+                    ）影响物体沉浮
+                </div>
+            </div>
+            <div class="button">
+                <button onclick="dropBalls()">放入水中</button>
+                <button onclick="resetExperiment()">重置实验</button>
+                <button onclick="checkAnswers()">检查答案</button>
+            </div>
+            <div class="experiment-conclusion">
+                <h2>实验结论</h2>
+                <p>物体在水中的沉浮与 <input type="text" id="blank1" style="width: 80px;"> 和 <input type="text" id="blank2" style="width: 80px;"> 有关。当物体的 <input type="text" id="blank3" style="width: 80px;"> 较大时，物体更容易漂浮；当物体的 <input type="text" id="blank4" style="width: 80px;"> 较大时，物体更容易下沉。</p>
+            </div>
+            <div class="easter-egg">
+                <h2>彩蛋</h2>
+                <p>（1）当液体选择为水，将球的体积改为100，质量为100.观察小球的状态。</p>
+                <p>（2）当液体选择为盐水，将球的体积改为100，质量为120，观察小球的状态。</p>
+            </div>
+            <div class="science-principle experiment-box">
+                <h2>科学原理</h2>
+                <p>通过实验我们发现，物体在水中的沉浮与它的体积和质量有关。</p>
+                <ul>
+                    <li>质量相同，体积大的物体，放入水中后更容易漂浮。</li>
+                    <li>体积相同，质量大的物体，放入水中后更容易下沉。</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+    <div class="agent-iframe-container">
+        <iframe
+            src="http://agent.qkos.cn/chat/fkdXQAA3fSSrxBUh"
+            style="width: 100%; height: 100%; min-height: 700px;"
+            frameborder="0"
+            allow="microphone">
+        </iframe>
+    </div>
+
+    <script>
+        // 初始化滑块事件监听
+        document.getElementById('volumeSlider1').addEventListener('input', updateValues);
+        document.getElementById('massSlider1').addEventListener('input', updateValues);
+
+        document.getElementById('volumeSlider2').addEventListener('input', updateValues);
+        document.getElementById('massSlider2').addEventListener('input', updateValues);
+
+        document.getElementById('volumeSlider3').addEventListener('input', updateValues);
+        document.getElementById('massSlider3').addEventListener('input', updateValues);
+
+        // 初始化显示值
+        updateValues();
+
+        // 监听液体选择变化
+        const liquidRadios = document.querySelectorAll('input[name=liquidChoice]');
+        liquidRadios.forEach(radio => {
+            radio.addEventListener('change', updateLiquidColor);
+        });
+
+        // 初始化液体颜色
+        updateLiquidColor();
+
+        // 监听实验记录3的液体选择
+        const record3LiquidRadios = document.querySelectorAll('input[name=record3-liquid]');
+        record3LiquidRadios.forEach(radio => {
+            radio.addEventListener('change', function() {
+                // 取消其他选项的选中状态
+                record3LiquidRadios.forEach(otherRadio => {
+                    if (otherRadio !== this) {
+                        otherRadio.checked = false;
+                    }
+                });
+                // 更新液体选择
+                const selectedLiquid = this.value;
+                const liquidChoiceRadios = document.querySelectorAll('input[name=liquidChoice]');
+                liquidChoiceRadios.forEach(choiceRadio => {
+                    if (choiceRadio.value === selectedLiquid) {
+                        choiceRadio.checked = true;
+                        updateLiquidColor();
+                    }
+                });
+            });
+        });
+
+        function updateValues() {
+            // 更新球1的值
+            const volume1 = parseInt(document.getElementById('volumeSlider1').value);
+            const mass1 = parseInt(document.getElementById('massSlider1').value);
+
+            document.getElementById('volume1').textContent = volume1;
+            document.getElementById('mass1').textContent = mass1;
+
+            // 更新球2的值
+            const volume2 = parseInt(document.getElementById('volumeSlider2').value);
+            const mass2 = parseInt(document.getElementById('massSlider2').value);
+
+            document.getElementById('volume2').textContent = volume2;
+            document.getElementById('mass2').textContent = mass2;
+
+            // 更新球3的值
+            const volume3 = parseInt(document.getElementById('volumeSlider3').value);
+            const mass3 = parseInt(document.getElementById('massSlider3').value);
+
+            document.getElementById('volume3').textContent = volume3;
+            document.getElementById('mass3').textContent = mass3;
+        }
+
+        // 更新液体颜色
+        function updateLiquidColor() {
+            const liquidChoice = document.querySelector('input[name=liquidChoice]:checked').value;
+            const waterElement = document.getElementById('water-element');
+            const waterBottomElement = document.getElementById('water-bottom-element');
+            let waterColor, waterBottomColor;
+
+            switch (liquidChoice) {
+                case 'water':
+                    waterColor = 'linear-gradient(to bottom, #4db6ff 20%, #0091ea 100%)';
+                    waterBottomColor = '#0077c2';
+                    break;
+                case 'saltwater':
+                    waterColor = 'linear-gradient(to bottom, #73e8ff 20%, #00b0ff 100%)';
+                    waterBottomColor = '#0081cb';
+                    break;
+                case 'cola':
+                    waterColor = 'linear-gradient(to bottom, #6d4c41 20%, #3e2723 100%)';
+                    waterBottomColor = '#260e04';
+                    break;
+                case 'oil':
+                    waterColor = 'linear-gradient(to bottom, #ffeb3b 20%, #f9a825 100%)';
+                    waterBottomColor = '#ef6c00';
+                    break;
+            }
+
+            waterElement.style.background = waterColor;
+            waterBottomElement.style.background = waterBottomColor;
+        }
+
+        // 放入水中函数 - 使用async/await确保顺序执行
+        async function dropBalls() {
+            // 清除之前的物体
+            const container = document.getElementById('water-container');
+            const existingBalls = container.querySelectorAll('.object');
+            existingBalls.forEach(ball => ball.remove());
+
+            // 获取当前值
+            const volume1 = parseInt(document.getElementById('volumeSlider1').value);
+            const mass1 = parseInt(document.getElementById('massSlider1').value);
+
+            const volume2 = parseInt(document.getElementById('volumeSlider2').value);
+            const mass2 = parseInt(document.getElementById('massSlider2').value);
+
+            const volume3 = parseInt(document.getElementById('volumeSlider3').value);
+            const mass3 = parseInt(document.getElementById('massSlider3').value);
+
+            // 获取选择的记录表格
+            const recordChoice = document.querySelector('input[name=recordChoice]:checked').value;
+
+            if (recordChoice === 'record1') {
+                // 填充实验记录表格1
+                document.getElementById('record-mass1-span').textContent = mass1;
+                document.getElementById('record-volume1-span').textContent = volume1;
+
+                document.getElementById('record-mass2-span').textContent = mass2;
+                document.getElementById('record-volume2-span').textContent = volume2;
+
+                document.getElementById('record-mass3-span').textContent = mass3;
+                document.getElementById('record-volume3-span').textContent = volume3;
+
+                // 依次执行每个球的动画，确保一个完成后再开始下一个
+                await executeBallAnimation(1, volume1, mass1, '#ff5722', 25);
+                await executeBallAnimation(2, volume2, mass2, '#4CAF50', 50);
+                await executeBallAnimation(3, volume3, mass3, '#FFC107', 75);
+            } else if (recordChoice === 'record2') {
+                // 填充实验记录表格2
+                document.getElementById('record-mass1-2-span').textContent = mass1;
+                document.getElementById('record-volume1-2-span').textContent = volume1;
+
+                document.getElementById('record-mass2-2-span').textContent = mass2;
+                document.getElementById('record-volume2-2-span').textContent = volume2;
+
+                document.getElementById('record-mass3-2-span').textContent = mass3;
+                document.getElementById('record-volume3-2-span').textContent = volume3;
+
+                // 依次执行每个球的动画，确保一个完成后再开始下一个
+                await executeBallAnimation(1, volume1, mass1, '#ff5722', 25);
+                await executeBallAnimation(2, volume2, mass2, '#4CAF50', 50);
+                await executeBallAnimation(3, volume3, mass3, '#FFC107', 75);
+            } else if (recordChoice === 'record3') {
+                const checkedLiquid = document.querySelector('input[name=record3-liquid]:checked');
+                if (!checkedLiquid) {
+                    alert('请至少选中一行记录！');
+                    return;
+                }
+                const liquidValue = checkedLiquid.value;
+                document.getElementById(`record-mass1-3-${liquidValue}-span`).textContent = mass1;
+                document.getElementById(`record-volume1-3-${liquidValue}-span`).textContent = volume1;
+                let liquidDensity;
+                switch (liquidValue) {
+                    case 'water':
+                        liquidDensity = 1;
+                        break;
+                    case 'saltwater':
+                        liquidDensity = 1.2;
+                        break;
+                    case 'cola':
+                        liquidDensity = 1.06;
+                        break;
+                    case 'oil':
+                        liquidDensity = 0.9;
+                        break;
+                }
+                executeBallAnimation(1, volume1, mass1, '#ff5722', 25, liquidDensity);
+            }
+        }
+
+        // 计算密度
+        function getDensity(mass, volume) {
+            return mass / volume;
+        }
+
+        // 执行单个球的完整动画过程
+        function executeBallAnimation(ballNumber, volume, mass, color, positionPercent, liquidDensity = 1) {
+            return new Promise(resolve => {
+                const container = document.getElementById('water-container');
+                const water = container.querySelector('.water');
+                const waterSurface = container.querySelector('.water-surface');
+                const waterBottom = container.querySelector('.water-bottom');
+
+                // 计算球体大小（根据体积），放大8倍
+                const radius = Math.sqrt(volume / Math.PI) * 0.7 * 8;
+
+                // 创建球体元素
+                const ball = document.createElement('div');
+                ball.className = 'object';
+                ball.style.width = `${radius * 2}px`;
+                ball.style.height = `${radius * 2}px`;
+                ball.style.backgroundColor = color;
+                ball.style.left = `${positionPercent}%`;
+                ball.style.top = '20px';
+                container.appendChild(ball);
+
+                // 第一阶段：从上向下移动到水槽的一半
+                const containerHeight = container.offsetHeight;
+                const waterHeight = water.offsetHeight;
+                const middlePoint = containerHeight - waterHeight / 2 - radius;
+
+                ball.style.transition = 'top 1.5s ease-in-out';
+                setTimeout(() => {
+                    ball.style.top = `${middlePoint}px`;
+
+                    // 第二阶段：根据密度执行不同动作
+                    setTimeout(() => {
+                        // 创建涟漪效果
+                        createRipple(positionPercent, radius);
+
+                        // 重置过渡以应用新的动画
+                        ball.style.transition = 'none';
+
+                        const density = getDensity(mass, volume);
+                        if (density > liquidDensity) {
+                            // 密度大于液体密度：下沉到深蓝色部分
+                            const bottomPoint = containerHeight - waterBottom.offsetHeight - radius;
+                            const sinkDistance = bottomPoint - middlePoint;
+
+                            ball.style.transition = `top ${density * 1.5}s ease-in-out`;
+                            setTimeout(() => {
+                                ball.style.top = `${bottomPoint}px`;
+                                setTimeout(resolve, density * 1500);
+                            }, 500);
+                        } else if (density < liquidDensity) {
+                            // 密度小于液体密度：上浮到白色区域，三分之一在白色区域
+                            const waterSurfaceY = containerHeight - waterHeight;
+                            const floatDistance = waterSurfaceY - middlePoint + radius / 3;
+
+                            ball.style.transition = `top ${(2 - density) * 1.5}s ease-in-out`;
+                            setTimeout(() => {
+                                ball.style.top = `${waterSurfaceY - radius / 3}px`;
+                                setTimeout(resolve, (2 - density) * 1500);
+                            }, 500);
+                        } else {
+                            // 密度等于液体密度：悬浮在水中
+                            ball.style.transition = 'top 1s ease-in-out';
+                            setTimeout(() => {
+                                ball.style.top = `${middlePoint}px`;
+                                setTimeout(resolve, 1000);
+                            }, 500);
+                        }
+                    }, 1500);
+                }, 0);
+            });
+        }
+
+        // 创建涟漪效果
+        function createRipple(positionPercent, radius) {
+            const container = document.getElementById('water-container');
+            const waterSurface = container.querySelector('.water-surface');
+            const ripple = document.createElement('div');
+            ripple.className = 'ripple';
+            ripple.style.width = `${radius * 2}px`;
+            ripple.style.height = `${radius * 2}px`;
+            ripple.style.left = `calc(${positionPercent}% - ${radius}px)`;
+            ripple.style.top = `${waterSurface.offsetTop - radius}px`;
+            container.appendChild(ripple);
+        }
+
+        // 检查答案函数
+        function checkAnswers() {
+            // 检查实验记录1的是否漂浮选项
+            const float11 = document.querySelector('input[name=float1-1]:checked');
+            const float21 = document.querySelector('input[name=float2-1]:checked');
+            const float31 = document.querySelector('input[name=float3-1]:checked');
+            const judgment11 = document.getElementById('judgment1-1');
+            const judgment21 = document.getElementById('judgment2-1');
+            const judgment31 = document.getElementById('judgment3-1');
+
+            const volume1 = parseInt(document.getElementById('volumeSlider1').value);
+            const mass1 = parseInt(document.getElementById('massSlider1').value);
+            const volume2 = parseInt(document.getElementById('volumeSlider2').value);
+            const mass2 = parseInt(document.getElementById('massSlider2').value);
+            const volume3 = parseInt(document.getElementById('volumeSlider3').value);
+            const mass3 = parseInt(document.getElementById('massSlider3').value);
+
+            const liquidChoice = document.querySelector('input[name=liquidChoice]:checked').value;
+            let liquidDensity;
+            switch (liquidChoice) {
+                case 'water':
+                    liquidDensity = 1;
+                    break;
+                case 'saltwater':
+                    liquidDensity = 1.2;
+                    break;
+                case 'cola':
+                    liquidDensity = 1.06;
+                    break;
+                case 'oil':
+                    liquidDensity = 0.9;
+                    break;
+            }
+
+            const density1 = getDensity(mass1, volume1);
+            const density2 = getDensity(mass2, volume2);
+            const density3 = getDensity(mass3, volume3);
+
+            const correctState1 = density1 > liquidDensity ? '下沉' : density1 < liquidDensity ? '漂浮' : '悬浮';
+            const correctState2 = density2 > liquidDensity ? '下沉' : density2 < liquidDensity ? '漂浮' : '悬浮';
+            const correctState3 = density3 > liquidDensity ? '下沉' : density3 < liquidDensity ? '漂浮' : '悬浮';
+
+            if (float11) {
+                if (float11.value === correctState1) {
+                    judgment11.textContent = '正确';
+                    judgment11.className = 'judgment-correct';
+                } else {
+                    judgment11.textContent = '错误，正确答案是 ' + correctState1;
+                    judgment11.className = 'judgment-incorrect';
+                }
+            } else {
+                judgment11.textContent = '未选择';
+                judgment11.className = 'judgment-incorrect';
+            }
+
+            if (float21) {
+                if (float21.value === correctState2) {
+                    judgment21.textContent = '正确';
+                    judgment21.className = 'judgment-correct';
+                } else {
+                    judgment21.textContent = '错误，正确答案是 ' + correctState2;
+                    judgment21.className = 'judgment-incorrect';
+                }
+            } else {
+                judgment21.textContent = '未选择';
+                judgment21.className = 'judgment-incorrect';
+            }
+
+            if (float31) {
+                if (float31.value === correctState3) {
+                    judgment31.textContent = '正确';
+                    judgment31.className = 'judgment-correct';
+                } else {
+                    judgment31.textContent = '错误，正确答案是 ' + correctState3;
+                    judgment31.className = 'judgment-incorrect';
+                }
+            } else {
+                judgment31.textContent = '未选择';
+                judgment31.className = 'judgment-incorrect';
+            }
+
+            // 检查实验记录2的是否漂浮选项
+            const float12 = document.querySelector('input[name=float1-2]:checked');
+            const float22 = document.querySelector('input[name=float2-2]:checked');
+            const float32 = document.querySelector('input[name=float3-2]:checked');
+            const judgment12 = document.getElementById('judgment1-2');
+            const judgment22 = document.getElementById('judgment2-2');
+            const judgment32 = document.getElementById('judgment3-2');
+
+            if (float12) {
+                if (float12.value === correctState1) {
+                    judgment12.textContent = '正确';
+                    judgment12.className = 'judgment-correct';
+                } else {
+                    judgment12.textContent = '错误，正确答案是 ' + correctState1;
+                    judgment12.className = 'judgment-incorrect';
+                }
+            } else {
+                judgment12.textContent = '未选择';
+                judgment12.className = 'judgment-incorrect';
+            }
+
+            if (float22) {
+                if (float22.value === correctState2) {
+                    judgment22.textContent = '正确';
+                    judgment22.className = 'judgment-correct';
+                } else {
+                    judgment22.textContent = '错误，正确答案是 ' + correctState2;
+                    judgment22.className = 'judgment-incorrect';
+                }
+            } else {
+                judgment22.textContent = '未选择';
+                judgment22.className = 'judgment-incorrect';
+            }
+
+            if (float32) {
+                if (float32.value === correctState3) {
+                    judgment32.textContent = '正确';
+                    judgment32.className = 'judgment-correct';
+                } else {
+                    judgment32.textContent = '错误，正确答案是 ' + correctState3;
+                    judgment32.className = 'judgment-incorrect';
+                }
+            } else {
+                judgment32.textContent = '未选择';
+                judgment32.className = 'judgment-incorrect';
+            }
+
+            // 检查实验记录3的是否漂浮选项
+            const record3Liquid = document.querySelector('input[name=record3-liquid]:checked');
+            if (record3Liquid) {
+                const liquidValue = record3Liquid.value;
+                let liquidDensity3;
+                switch (liquidValue) {
+                    case 'water':
+                        liquidDensity3 = 1;
+                        break;
+                    case 'saltwater':
+                        liquidDensity3 = 1.2;
+                        break;
+                    case 'cola':
+                        liquidDensity3 = 1.06;
+                        break;
+                    case 'oil':
+                        liquidDensity3 = 0.9;
+                        break;
+                }
+                const density13 = getDensity(mass1, volume1);
+                const correctState13 = density13 > liquidDensity3 ? '下沉' : density13 < liquidDensity3 ? '漂浮' : '悬浮';
+                const float13 = document.querySelector(`input[name=float1-3-${liquidValue}]:checked`);
+                const judgment13 = document.getElementById(`judgment1-3-${liquidValue}`);
+
+                if (float13) {
+                    if (float13.value === correctState13) {
+                        judgment13.textContent = '正确';
+                        judgment13.className = 'judgment-correct';
+                    } else {
+                        judgment13.textContent = '错误，正确答案是 ' + correctState13;
+                        judgment13.className = 'judgment-incorrect';
+                    }
+                } else {
+                    judgment13.textContent = '未选择';
+                    judgment13.className = 'judgment-incorrect';
+                }
+            }
+
+            // 检查实验记录1下方的题目
+            const blank1 = document.querySelector('input[name=blank1]:checked');
+            const blank2 = document.querySelector('input[name=blank2]:checked');
+            if (blank1 && blank2) {
+                if (blank1.value === '越大' && blank2.value === '漂浮') {
+                    blank1.parentNode.style.color = 'green';
+                    blank2.parentNode.style.color = 'green';
+                } else {
+                    blank1.parentNode.style.color = 'red';
+                    blank2.parentNode.style.color = 'red';
+                }
+            }
+
+            // 检查实验记录2下方的题目
+            const blank3 = document.querySelector('input[name=blank3]:checked');
+            const blank4 = document.querySelector('input[name=blank4]:checked');
+            if (blank3 && blank4) {
+                if (blank3.value === '越大' && blank4.value === '下沉') {
+                    blank3.parentNode.style.color = 'green';
+                    blank4.parentNode.style.color = 'green';
+                } else {
+                    blank3.parentNode.style.color = 'red';
+                    blank4.parentNode.style.color = 'red';
+                }
+            }
+
+            // 检查实验记录3下方的题目
+            const blank9 = document.querySelector('input[name=blank9]:checked');
+            if (blank9) {
+                if (blank9.value === '会') {
+                    blank9.parentNode.style.color = 'green';
+                } else {
+                    blank9.parentNode.style.color = 'red';
+                }
+            }
+        }
+
+        // 重置实验函数
+        function resetExperiment() {
+            // 重置滑块值
+            document.getElementById('volumeSlider1').value = 50;
+            document.getElementById('massSlider1').value = 100;
+            document.getElementById('volumeSlider2').value = 150;
+            document.getElementById('massSlider2').value = 100;
+            document.getElementById('volumeSlider3').value = 250;
+            document.getElementById('massSlider3').value = 100;
+
+            // 重置显示值
+            updateValues();
+
+            // 重置液体选择
+            const liquidChoiceRadios = document.querySelectorAll('input[name=liquidChoice]');
+            liquidChoiceRadios.forEach(radio => {
+                if (radio.value === 'water') {
+                    radio.checked = true;
+                }
+            });
+            updateLiquidColor();
+
+            // 清除之前的物体
+            const container = document.getElementById('water-container');
+            const existingBalls = container.querySelectorAll('.object');
+            existingBalls.forEach(ball => ball.remove());
+
+            // 重置实验记录表格
+            const recordSpans = document.querySelectorAll('.record-table span');
+            recordSpans.forEach(span => {
+                span.textContent = '';
+            });
+
+            // 重置判断结果
+            const judgmentSpans = document.querySelectorAll('.record-table .judgment-correct, .record-table .judgment-incorrect');
+            judgmentSpans.forEach(span => {
+                span.textContent = '';
+                span.className = '';
+            });
+
+            // 重置单选框选择
+            const allRadios = document.querySelectorAll('input[type=radio]');
+            allRadios.forEach(radio => {
+                radio.checked = false;
+            });
+            document.querySelector('input[name=recordChoice][value=record1]').checked = true;
+            document.querySelector('input[name=liquidChoice][value=water]').checked = true;
+        }
+    </script>
+</body>
+
+</html>
