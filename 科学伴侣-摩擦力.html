@@ -1,0 +1,748 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>小车摩擦力实验模拟</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#165DFF',
+                        secondary: '#FF7D00',
+                        success: '#00B42A',
+                        danger: '#F53F3F',
+                        warning: '#FF7D00',
+                        info: '#86909C',
+                        light: '#F2F3F5',
+                        dark: '#1D2129',
+                    },
+                    fontFamily: {
+                        // 将字体改为楷体
+                        inter: ['KaiTi', 'system-ui', 'sans-serif'],
+                    },
+                }
+            }
+        }
+    </script>
+    <style type="text/tailwindcss">
+        @layer utilities {
+            .content-auto {
+                content-visibility: auto;
+            }
+
+            .shadow-depth {
+                box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+            }
+
+            .transition-custom {
+                transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            }
+
+            .track-custom::-webkit-slider-runnable-track {
+                height: 8px;
+                background: #E5E7EB;
+                border-radius: 4px;
+            }
+
+            .thumb-custom::-webkit-slider-thumb {
+                -webkit-appearance: none;
+                height: 20px;
+                width: 20px;
+                border-radius: 50%;
+                background: #165DFF;
+                cursor: pointer;
+                margin-top: -6px;
+                box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+            }
+        }
+
+        /* 新增样式，用于定位 iframe 容器 */
+        .agent-iframe-container {
+            width: 100%; /* 设置宽度为 100% */
+            height: 700px;
+            margin-top: 20px; /* 添加顶部间距 */
+        }
+    </style>
+</head>
+
+<body class="bg-gray-50 font-inter text-dark min-h-screen flex flex-col">
+    <!-- 顶部导航 -->
+    <header class="bg-white shadow-md sticky top-0 z-50 transition-all duration-300">
+        <div class="container mx-auto px-4 py-4 flex justify-between items-center">
+            <div class="flex items-center space-x-2">
+                <i class="fa-solid fa-car text-primary text-2xl"></i>
+                <h1 class="text-xl md:text-2xl font-bold text-primary">小车摩擦力实验模拟</h1>
+            </div>
+            <nav class="hidden md:flex space-x-6">
+                <a href="#experiment" class="text-dark hover:text-primary transition-colors duration-200 font-medium">实验</a>
+                <a href="#experiment" class="text-dark hover:text-primary transition-colors duration-200 font-medium">实验指导</a>
+                <a href="#results" class="text-dark hover:text-primary transition-colors duration-200 font-medium">实验记录</a>
+            </nav>
+            <button class="md:hidden text-dark text-xl" id="mobile-menu-button">
+                <i class="fa-solid fa-bars"></i>
+            </button>
+        </div>
+        <!-- 移动端菜单 -->
+        <div class="md:hidden hidden bg-white border-t" id="mobile-menu">
+            <div class="container mx-auto px-4 py-2 flex flex-col space-y-3">
+                <a href="#experiment" class="text-dark hover:text-primary py-2 transition-colors duration-200">实验</a>
+                <a href="#experiment" class="text-dark hover:text-primary py-2 transition-colors duration-200">实验指导</a>
+                <a href="#results" class="text-dark hover:text-primary py-2 transition-colors duration-200">实验记录</a>
+            </div>
+        </div>
+    </header>
+
+    <!-- 主要内容 -->
+    <main class="flex-grow container mx-auto px-4 py-8">
+        <!-- 实验区域 -->
+        <section id="experiment" class="bg-white rounded-xl shadow-depth p-6 mb-8 transition-all duration-300 hover:shadow-lg">
+            <h2 class="text-2xl font-bold mb-6 flex items-center">
+                <i class="fa-solid fa-flask text-primary mr-2"></i>实验区域
+            </h2>
+
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                <!-- 控制面板 -->
+                <div class="lg:col-span-1 bg-light rounded-lg p-5 shadow-inner">
+                    <h3 class="text-xl font-semibold mb-4 text-primary flex items-center">
+                        <i class="fa-solid fa-sliders mr-2"></i>实验控制
+                    </h3>
+
+                    <!-- 接触面材料选择 -->
+                    <div class="mb-6">
+                        <label class="block text-sm font-medium mb-2">接触面材料</label>
+                        <div class="grid grid-cols-3 gap-3">
+                            <button class="material-btn bg-primary text-white p-3 rounded-lg shadow-md transition-custom hover:shadow-lg active:scale-95"
+                                data-material="glass">
+                                <i class="fa-solid fa-wind mr-1"></i> 玻璃
+                            </button>
+                            <button class="material-btn bg-gray-300 text-dark p-3 rounded-lg shadow-md transition-custom hover:shadow-lg active:scale-95"
+                                data-material="wood">
+                                <i class="fa-solid fa-tree mr-1"></i> 木板
+                            </button>
+                            <button class="material-btn bg-gray-300 text-dark p-3 rounded-lg shadow-md transition-custom hover:shadow-lg active:scale-95"
+                                data-material="sandpaper">
+                                <i class="fa-solid fa-sandstorm mr-1"></i> 砂纸
+                            </button>
+                        </div>
+                        <p class="mt-2 text-xs text-info" id="material-coefficient">表面特性: 较为光滑</p>
+                    </div>
+
+                    <!-- 拉力控制 -->
+                    <div class="mb-6">
+                        <label for="pull-force" class="block text-sm font-medium mb-2">拉力大小 (N)</label>
+                        <input type="range" id="pull-force" min="0" max="10" step="0.1" value="0"
+                            class="w-full track-custom thumb-custom focus:outline-none focus:ring-2 focus:ring-primary/50">
+                        <div class="flex justify-between text-xs text-info mt-1">
+                            <span>0 N</span>
+                            <span id="pull-force-value">0.0 N</span>
+                            <span>10 N</span>
+                        </div>
+                        <div class="flex space-x-3 mt-3">
+                            <button id="decrease-pull-force"
+                                class="bg-secondary text-white px-4 py-2 rounded-lg shadow-md transition-custom hover:shadow-lg active:scale-95">
+                                <i class="fa-solid fa-minus mr-1"></i> 减少拉力
+                            </button>
+                            <button id="increase-pull-force"
+                                class="bg-secondary text-white px-4 py-2 rounded-lg shadow-md transition-custom hover:shadow-lg active:scale-95">
+                                <i class="fa-solid fa-plus mr-1"></i> 增加拉力
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- 砝码添加 -->
+                    <div class="mb-6">
+                        <label class="block text-sm font-medium mb-2">添加/去除砝码</label>
+                        <div class="flex items-center space-x-3">
+                            <button id="add-weight"
+                                class="bg-secondary text-white px-4 py-2 rounded-lg shadow-md transition-custom hover:shadow-lg active:scale-95">
+                                <i class="fa-solid fa-plus mr-1"></i> 添加砝码
+                            </button>
+                            <button id="remove-weight"
+                                class="bg-secondary text-white px-4 py-2 rounded-lg shadow-md transition-custom hover:shadow-lg active:scale-95">
+                                <i class="fa-solid fa-minus mr-1"></i> 去除砝码
+                            </button>
+                            <span id="weight-count" class="text-lg font-semibold">0</span>
+                            <span class="text-sm">个砝码 (共 <span id="total-weight">5</span> N)</span>
+                        </div>
+                    </div>
+
+                    <!-- 实验按钮 -->
+                    <div class="flex space-x-3">
+                        <button id="start-btn"
+                            class="flex-1 bg-success text-white px-6 py-3 rounded-lg shadow-md transition-custom hover:shadow-lg active:scale-95">
+                            <i class="fa-solid fa-play mr-1"></i> 开始拉动
+                        </button>
+                        <button id="reset-btn"
+                            class="bg-gray-400 text-white px-4 py-3 rounded-lg shadow-md transition-custom hover:shadow-lg active:scale-95">
+                            <i class="fa-solid fa-refresh mr-1"></i>
+                        </button>
+                    </div>
+
+                    <!-- 实验状态 -->
+                    <div class="mt-6 p-4 bg-primary/10 rounded-lg border border-primary/20">
+                        <h4 class="font-medium mb-2 flex items-center">
+                            <i class="fa-solid fa-info-circle text-primary mr-1"></i> 实验状态
+                        </h4>
+                        <p id="experiment-status" class="text-sm">就绪 - 调整参数并点击"开始拉动"</p>
+                    </div>
+
+                    <!-- 实验指导 -->
+                    <div class="mt-12">
+                        <h3 class="text-xl font-semibold mb-3 text-primary">实验指导</h3>
+                        <ol class="list-decimal pl-5 space-y-3 text-gray-700">
+                            <li>选择一种接触面材料（玻璃、木板或砂纸），调整拉力大小（0 - 10N）</li>
+                            <li>可选择添加或去除砝码增加或减少小车重量</li>
+                            <li>点击"开始拉动"按钮观察实验结果</li>
+                            <li>每进行一次实验，到实验记录表点击保存数据</li>
+                            <li>完成练习</li>
+                            <li>探索影响摩擦力的因素</li>
+                        </ol>
+                    </div>
+                </div>
+
+                <!-- 实验区域和结果 -->
+                <div class="lg:col-span-2 space-y-6">
+                    <!-- 实验动画区域 -->
+                    <div class="relative bg-white border-2 border-gray-200 rounded-lg p-4 h-[300px] overflow-hidden"
+                        id="experiment-area">
+                        <!-- 接触面 -->
+                        <div id="surface"
+                            class="absolute bottom-0 left-0 w-full h-[100px] bg-blue-100 transition-all duration-500">
+                            <!-- 网格线 -->
+                            <div class="w-full h-full bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGRlZnM+PHBhdHRlcm4gaWQ9ImdyaWQiIHdpZHRoPSI0MCIgaGVpZ2h0PSI0MCIgcGF0dGVyblVuaXRzPSJ1c2VyU3BhY2VPblVzZSI+PHBhdGggZD0iTSAwIDEwIEwgNDAgMTAgTSAxMCAwIEwgMTAgNDAgTSAwIDIwIEwgNDAgMjAgTSAyMCAwIEwgMjAgNDAgTSAwIDMwIEwgNDAgMzAgTSAzMCAwIEwgMzAgNDAiIGZpbGw9Im5vbmUiIHN0cm9rZT0iI2UyZTVlOSIgb3BhY2l0eT0iMC4yIiBzdHJva2Utd2lkdGg9IjEiLz48cGF0aCBkPSJNIDQwIDAgTCAwIDAgMCA0MCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjZTJlNWU5IiBzdHJva2Utd2lkdGg9IjEiLz48L3BhdHRlcm4+PC9kZWZzPjxyZWN0IHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiIGZpbGw9InVybCgjZ3JpZCkiLz48L3N2Zz4=')]">
+                            </div>
+                        </div>
+
+                        <!-- 小车 -->
+                        <div id="car"
+                            class="absolute bottom-[100px] left-[50px] w-[80px] h-[40px] bg-primary rounded-lg shadow-md transition-all duration-500">
+                            <div class="absolute -bottom-[15px] left-[10px] w-[15px] h-[15px] bg-dark rounded-full"></div>
+                            <div class="absolute -bottom-[15px] right-[10px] w-[15px] h-[15px] bg-dark rounded-full"></div>
+                            <!-- 拉力箭头 -->
+                            <div id="pull-arrow"
+                                class="absolute left-[-40px] top-[10px] w-[40px] h-[20px] flex items-center">
+                                <div class="h-[2px] bg-secondary w-full"></div>
+                                <div class="w-0 h-0 border-y-[6px] border-y-transparent border-l-[10px] border-l-secondary ml-[-1px]">
+                                </div>
+                            </div>
+                            <!-- 砝码 -->
+                            <div id="weights-container"
+                                class="absolute top-[-30px] left-0 w-full flex justify-center"></div>
+                        </div>
+
+                        <!-- 终点线 -->
+                        <div class="absolute bottom-[100px] right-[100px] w-[2px] h-[50px] bg-danger"></div>
+
+                        <!-- 距离标记 -->
+                        <div class="absolute bottom-[80px] right-[100px] w-[100px] h-[20px] bg-white/80 rounded border border-gray-300 flex items-center justify-center text-xs">
+                            1米
+                        </div>
+                    </div>
+
+                    <!-- 实验结果 -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <!-- 隐藏摩擦力显示 -->
+                        <!-- <div class="bg-light rounded-lg p-4 shadow-inner">
+                            <h4 class="text-sm font-medium text-info mb-1">摩擦力</h4>
+                            <p id="friction-force" class="text-2xl font-bold">0.5 N</p>
+                        </div> -->
+                        <div class="bg-light rounded-lg p-4 shadow-inner">
+                            <h4 class="text-sm font-medium text-info mb-1">是否移动</h4>
+                            <p id="movement-status" class="text-2xl font-bold text-danger">否</p>
+                        </div>
+                        <div class="bg-light rounded-lg p-4 shadow-inner">
+                            <h4 class="text-sm font-medium text-info mb-1">滑行时间</h4>
+                            <p id="movement-time" class="text-2xl font-bold">--</p>
+                        </div>
+                    </div>
+
+                    <!-- 新增的 iframe 容器 -->
+                    <div class="agent-iframe-container">
+                        <iframe
+                            src="http://agent.qkos.cn/chat/CPNhsXzmdAxbDPwy"
+                            style="width: 100%; height: 100%; min-height: 700px"
+                            frameborder="0"
+                            allow="microphone">
+                        </iframe>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 实验记录 -->
+        <section id="results" class="bg-white rounded-xl shadow-depth p-6 transition-all duration-300 hover:shadow-lg">
+            <h2 class="text-2xl font-bold mb-6 flex items-center">
+                <i class="fa-solid fa-table text-primary mr-2"></i>实验记录
+            </h2>
+
+            <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-4">
+                <div>
+                    <p class="text-sm text-info">记录你的实验数据，以便后续分析比较</p>
+                </div>
+                <div class="mt-3 md:mt-0">
+                    <button id="save-result"
+                        class="bg-primary text-white px-4 py-2 rounded-lg shadow-md transition-custom hover:shadow-lg active:scale-95">
+                        <i class="fa-solid fa-save mr-1"></i> 保存当前数据
+                    </button>
+                    <button id="clear-results"
+                        class="bg-gray-400 text-white px-4 py-2 rounded-lg shadow-md transition-custom hover:shadow-lg active:scale-95 ml-2">
+                        <i class="fa-solid fa-trash mr-1"></i> 清空记录
+                    </button>
+                </div>
+            </div>
+
+            <div class="overflow-x-auto">
+                <table class="min-w-full bg-white border border-gray-200 rounded-lg">
+                    <thead>
+                        <tr class="bg-gray-100">
+                            <th class="py-3 px-4 border-b">序号</th>
+                            <th class="py-3 px-4 border-b">接触面材料</th>
+                            <th class="py-3 px-4 border-b">拉力 (N)</th>
+                            <th class="py-3 px-4 border-b">总重量 (N)</th>
+                            <th class="py-3 px-4 border-b">是否移动</th>
+                            <th class="py-3 px-4 border-b">滑行时间 (s)</th>
+                        </tr>
+                    </thead>
+                    <tbody id="results-table">
+                        <tr class="text-center">
+                            <td colspan="6" class="py-4 text-gray-500">暂无实验记录</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- 实验任务模块 -->
+        <section class="bg-white rounded-xl shadow-depth p-6 transition-all duration-300 hover:shadow-lg mt-8">
+            <h2 class="text-2xl font-bold mb-6 flex items-center">
+                <i class="fa-solid fa-tasks text-primary mr-2"></i>实验任务
+            </h2>
+            <h3 class="text-xl font-semibold mb-3 text-primary mt-6">记录实验数据并回答以下选择题：</h3>
+            <div class="mb-4">
+                <p>可以用什么来判断摩擦力的大小？</p>
+                <input type="radio" id="q1a" name="q1" value="A">
+                <label for="q1a">A. 拉力大小</label><br>
+                <input type="radio" id="q1b" name="q1" value="B">
+                <label for="q1b">B. 小车是否移动和滑行时间</label><br>
+                <input type="radio" id="q1c" name="q1" value="C">
+                <label for="q1c">C. 接触面材料颜色</label>
+            </div>
+            <div class="mb-4">
+                <p>在三种不同材质中，摩擦力的大小是否与粗糙程度有关系？</p>
+                <input type="radio" id="q2a" name="q2" value="A">
+                <label for="q2a">A. 有，粗糙程度越大，摩擦力越大</label><br>
+                <input type="radio" id="q2b" name="q2" value="B">
+                <label for="q2b">B. 有，粗糙程度越小，摩擦力越大</label><br>
+                <input type="radio" id="q2c" name="q2" value="C">
+                <label for="q2c">C. 没有关系</label>
+            </div>
+            <div class="mb-4">
+                <p>压力的大小是否会影响摩擦力？</p>
+                <input type="radio" id="q3a" name="q3" value="A">
+                <label for="q3a">A. 是，压力越大，摩擦力越大</label><br>
+                <input type="radio" id="q3b" name="q3" value="B">
+                <label for="q3b">B. 是，压力越小，摩擦力越大</label><br>
+                <input type="radio" id="q3c" name="q3" value="C">
+                <label for="q3c">C. 否，压力与摩擦力无关</label>
+            </div>
+            <button id="check-answers"
+                class="bg-primary text-white px-4 py-2 rounded-lg shadow-md transition-custom hover:shadow-lg active:scale-95">
+                <i class="fa-solid fa-check mr-1"></i> 检查答案
+            </button>
+            <div id="answer-result" class="mt-4"></div>
+        </section>
+    </main>
+
+    <!-- 页脚 -->
+    <footer class="bg-dark text-white py-6">
+        <div class="container mx-auto px-4">
+            <div class="flex flex-col md:flex-row justify-between items-center">
+                <div class="mb-4 md:mb-0">
+                    <div class="flex items-center">
+                        <i class="fa-solid fa-car text-primary text-xl mr-2"></i>
+                        <span class="font-bold text-lg">小车摩擦力实验模拟</span>
+                    </div>
+                    <p class="text-sm text-gray-400 mt-1">一个用于物理教学的交互式实验工具</p>
+                </div>
+                <div class="flex space-x-4">
+                    <a href="#" class="text-gray-400 hover:text-white transition-colors duration-200">
+                        <i class="fa-brands fa-github text-xl"></i>
+                    </a>
+                    <a href="#" class="text-gray-400 hover:text-white transition-colors duration-200">
+                        <i class="fa-brands fa-twitter text-xl"></i>
+                    </a>
+                    <a href="#" class="text-gray-400 hover:text-white transition-colors duration-200">
+                        <i class="fa-brands fa-youtube text-xl"></i>
+                    </a>
+                </div>
+            </div>
+            <div class="border-t border-gray-700 mt-6 pt-6 text-center text-sm text-gray-400">
+                &copy; 2025 教育科技. 保留所有权利.
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        // 实验数据
+        const experimentData = {
+            materials: {
+                glass: { name: '玻璃', coefficient: 0.1, color: '#a8c7fa', characteristic: '较为光滑' },
+                wood: { name: '木板', coefficient: 0.2, color: '#d2b48c', characteristic: '粗糙' },
+                sandpaper: { name: '砂纸', coefficient: 0.4, color: '#cd853f', characteristic: '比较粗糙' }
+            },
+            current: {
+                material: 'glass',
+                pullForce: 0,
+                weightCount: 0,
+                totalWeight: 5, // 小车重力 + 砝码重力
+                frictionForce: 0.5,
+                isMoving: false,
+                movementTime: null,
+                isExperimentRunning: false
+            },
+            results: []
+        };
+
+        // DOM 元素
+        const pullForceSlider = document.getElementById('pull-force');
+        const pullForceValue = document.getElementById('pull-force-value');
+        const addWeightBtn = document.getElementById('add-weight');
+        const removeWeightBtn = document.getElementById('remove-weight');
+        const weightCount = document.getElementById('weight-count');
+        const totalWeight = document.getElementById('total-weight');
+        const materialBtns = document.querySelectorAll('.material-btn');
+        const materialCoefficient = document.getElementById('material-coefficient');
+        const startBtn = document.getElementById('start-btn');
+        const resetBtn = document.getElementById('reset-btn');
+        const experimentStatus = document.getElementById('experiment-status');
+        // 移除摩擦力显示相关的 DOM 元素引用
+        // const frictionForce = document.getElementById('friction-force');
+        const movementStatus = document.getElementById('movement-status');
+        const movementTime = document.getElementById('movement-time');
+        const car = document.getElementById('car');
+        const surface = document.getElementById('surface');
+        const weightsContainer = document.getElementById('weights-container');
+        const saveResultBtn = document.getElementById('save-result');
+        const clearResultsBtn = document.getElementById('clear-results');
+        const resultsTable = document.getElementById('results-table');
+        const mobileMenuButton = document.getElementById('mobile-menu-button');
+        const mobileMenu = document.getElementById('mobile-menu');
+        const checkAnswersBtn = document.getElementById('check-answers');
+        const answerResult = document.getElementById('answer-result');
+        const decreasePullForceBtn = document.getElementById('decrease-pull-force');
+        const increasePullForceBtn = document.getElementById('increase-pull-force');
+
+        // 移除受力分析图相关的 DOM 元素引用
+        // const forceAnalysis = document.getElementById('force-analysis');
+        // const analysisPullArrow = document.getElementById('analysis-pull-arrow');
+        // const analysisFrictionArrow = document.getElementById('analysis-friction-arrow');
+
+        // 移动菜单切换
+        mobileMenuButton.addEventListener('click', () => {
+            mobileMenu.classList.toggle('hidden');
+        });
+
+        // 平滑滚动
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                const targetId = this.getAttribute('href');
+                const targetElement = document.querySelector(targetId);
+                if (targetElement) {
+                    window.scrollTo({
+                        top: targetElement.offsetTop - 80,
+                        behavior: 'smooth'
+                    });
+
+                    // 关闭移动菜单
+                    if (!mobileMenu.classList.contains('hidden')) {
+                        mobileMenu.classList.add('hidden');
+                    }
+                }
+            });
+        });
+
+        // 更新实验状态显示
+        function updateExperimentDisplay() {
+            // 更新摩擦力
+            experimentData.current.frictionForce =
+                experimentData.materials[experimentData.current.material].coefficient *
+                experimentData.current.totalWeight;
+            // 移除摩擦力显示更新
+            // frictionForce.textContent = experimentData.current.frictionForce.toFixed(1) + ' N';
+
+            // 更新表面颜色
+            surface.style.backgroundColor = experimentData.materials[experimentData.current.material].color;
+
+            // 更新材料摩擦系数显示
+            materialCoefficient.textContent =
+                `表面特性: ${experimentData.materials[experimentData.current.material].characteristic}`;
+
+            // 更新拉力显示
+            pullForceValue.textContent = experimentData.current.pullForce.toFixed(1) + ' N';
+
+            // 更新重量显示
+            weightCount.textContent = experimentData.current.weightCount;
+            totalWeight.textContent = experimentData.current.totalWeight;
+
+            // 重置移动状态和时间
+            if (!experimentData.current.isExperimentRunning) {
+                movementStatus.textContent = '否';
+                movementStatus.className = 'text-2xl font-bold text-danger';
+                movementTime.textContent = '--';
+            }
+
+            // 更新滑块的值
+            pullForceSlider.value = experimentData.current.pullForce;
+        }
+
+        // 初始化砝码显示
+        function updateWeightsDisplay() {
+            weightsContainer.innerHTML = '';
+            for (let i = 0; i < experimentData.current.weightCount; i++) {
+                const weight = document.createElement('div');
+                weight.className = 'w-[60px] h-[15px] bg-secondary rounded-sm border border-secondary/30 shadow-md';
+                weight.style.marginBottom = `${i * 15}px`;
+                weightsContainer.appendChild(weight);
+            }
+        }
+
+        // 运行实验
+        function runExperiment() {
+            if (experimentData.current.isExperimentRunning) return;
+
+            experimentData.current.isExperimentRunning = true;
+            experimentStatus.textContent = '实验进行中...';
+            startBtn.disabled = true;
+            startBtn.classList.add('opacity-70', 'cursor-not-allowed');
+
+            // 判断是否移动
+            const isMoving = experimentData.current.pullForce > experimentData.current.frictionForce;
+            experimentData.current.isMoving = isMoving;
+
+            // 更新移动状态显示
+            movementStatus.textContent = isMoving ? '是' : '否';
+            movementStatus.className = `text-2xl font-bold ${isMoving ? 'text-success' : 'text-danger'}`;
+
+            // 移除受力分析图相关代码
+            // 显示受力分析图中的箭头
+            // analysisPullArrow.classList.remove('hidden');
+            // analysisFrictionArrow.classList.remove('hidden');
+
+            if (isMoving) {
+                // 计算加速度 (F = ma -> a = F/m)
+                const mass = experimentData.current.totalWeight / 9.8; // kg, F=mg -> m=F/g
+                const netForce = experimentData.current.pullForce - experimentData.current.frictionForce;
+                // 放缓加速度，乘以一个小于1的系数
+                const acceleration = (netForce / mass) * 0.5; // m/s^2
+
+                // 计算到达终点的时间 (s = 0.5at^2 -> t = sqrt(2s/a))
+                const distance = 1; // 1米
+                const time = Math.sqrt((2 * distance) / acceleration); // 秒
+
+                // 动画持续时间 (毫秒)
+                const animationDuration = time * 1000;
+
+                // 更新移动时间显示
+                movementTime.textContent = time.toFixed(2) + ' s';
+                experimentData.current.movementTime = time;
+
+                // 移动小车动画
+                car.style.transition = `left ${animationDuration}ms cubic-bezier(0.25, 0.1, 0.25, 1)`;
+                car.style.left = 'calc(100% - 180px)';
+
+                // 动画结束后更新状态
+                setTimeout(() => {
+                    experimentStatus.textContent = '实验完成 - 小车已到达终点';
+                    startBtn.disabled = false;
+                    startBtn.classList.remove('opacity-70', 'cursor-not-allowed');
+                    experimentData.current.isExperimentRunning = false;
+                }, animationDuration);
+            } else {
+                // 未移动，直接重置
+                experimentData.current.movementTime = null;
+                setTimeout(() => {
+                    experimentStatus.textContent = '实验完成 - 小车未移动';
+                    startBtn.disabled = false;
+                    startBtn.classList.remove('opacity-70', 'cursor-not-allowed');
+                    experimentData.current.isExperimentRunning = false;
+                }, 1000);
+            }
+        }
+
+        // 重置实验
+        function resetExperiment() {
+            experimentStatus.textContent = '就绪 - 调整参数并点击"开始拉动"';
+            startBtn.disabled = false;
+            startBtn.classList.remove('opacity-70', 'cursor-not-allowed');
+            experimentData.current.isExperimentRunning = false;
+
+            // 重置小车位置
+            car.style.transition = 'left 500ms ease';
+            car.style.left = '50px';
+
+            // 移除受力分析图相关代码
+            // 隐藏受力分析图中的箭头
+            // analysisPullArrow.classList.add('hidden');
+            // analysisFrictionArrow.classList.add('hidden');
+
+            // 不重置拉力和砝码数量
+            // updateExperimentDisplay();
+        }
+
+        // 保存实验结果
+        function saveResult() {
+            const result = {
+                id: experimentData.results.length + 1,
+                material: experimentData.materials[experimentData.current.material].name,
+                pullForce: experimentData.current.pullForce,
+                totalWeight: experimentData.current.totalWeight,
+                isMoving: experimentData.current.isMoving,
+                movementTime: experimentData.current.movementTime
+            };
+
+            experimentData.results.push(result);
+            updateResultsTable();
+
+            // 添加保存成功动画效果
+            saveResultBtn.classList.add('bg-success');
+            setTimeout(() => {
+                saveResultBtn.classList.remove('bg-success');
+            }, 500);
+        }
+
+        // 更新结果表格
+        function updateResultsTable() {
+            if (experimentData.results.length === 0) {
+                resultsTable.innerHTML = `
+                    <tr class="text-center">
+                        <td colspan="6" class="py-4 text-gray-500">暂无实验记录</td>
+                    </tr>
+                `;
+                return;
+            }
+
+            resultsTable.innerHTML = '';
+            experimentData.results.forEach((result, index) => {
+                const row = document.createElement('tr');
+                row.className = index % 2 === 0 ? 'bg-white' : 'bg-gray-50';
+
+                row.innerHTML = `
+                    <td class="py-3 px-4 border-b">${result.id}</td>
+                    <td class="py-3 px-4 border-b">${result.material}</td>
+                    <td class="py-3 px-4 border-b">${result.pullForce.toFixed(1)}</td>
+                    <td class="py-3 px-4 border-b">${result.totalWeight}</td>
+                    <td class="py-3 px-4 border-b">${result.isMoving ? '<span class="text-success">是</span>' : '<span class="text-danger">否</span>'}</td>
+                    <td class="py-3 px-4 border-b">${result.isMoving ? result.movementTime.toFixed(2) + ' s' : '--'}</td>
+                `;
+
+                resultsTable.appendChild(row);
+            });
+        }
+
+        // 检查答案
+        function checkAnswers() {
+            const q1 = document.querySelector('input[name="q1"]:checked');
+            const q2 = document.querySelector('input[name="q2"]:checked');
+            const q3 = document.querySelector('input[name="q3"]:checked');
+
+            if (!q1 || !q2 || !q3) {
+                answerResult.innerHTML = '<p class="text-danger">请回答所有问题。</p>';
+                return;
+            }
+
+            let correctCount = 0;
+            let resultHTML = '';
+
+            if (q1.value === 'B') {
+                correctCount++;
+                resultHTML += '<p class="text-success">第一题回答正确！</p>';
+            } else {
+                resultHTML += '<p class="text-danger">第一题回答错误。可以通过小车是否移动和滑行时间来判断摩擦力的大小。当拉力大于摩擦力时，小车会移动，滑行时间也会受到摩擦力的影响。</p>';
+            }
+
+            if (q2.value === 'A') {
+                correctCount++;
+                resultHTML += '<p class="text-success">第二题回答正确！</p>';
+            } else {
+                resultHTML += '<p class="text-danger">第二题回答错误。在三种不同材质中，粗糙程度越大，摩擦力越大。例如，砂纸比玻璃粗糙，小车在砂纸上受到的摩擦力更大。</p>';
+            }
+
+            if (q3.value === 'A') {
+                correctCount++;
+                resultHTML += '<p class="text-success">第三题回答正确！</p>';
+            } else {
+                resultHTML += '<p class="text-danger">第三题回答错误。压力越大，摩擦力越大。可以通过添加砝码增加小车对接触面的压力，从而观察到摩擦力的变化。</p>';
+            }
+
+            if (correctCount === 3) {
+                resultHTML += '<p class="text-success">恭喜你，全部回答正确！</p>';
+            }
+
+            answerResult.innerHTML = resultHTML;
+        }
+
+        // 事件监听器
+        pullForceSlider.addEventListener('input', () => {
+            experimentData.current.pullForce = parseFloat(pullForceSlider.value);
+            updateExperimentDisplay();
+        });
+
+        addWeightBtn.addEventListener('click', () => {
+            if (experimentData.current.isExperimentRunning) return;
+            if (experimentData.current.weightCount < 10) { // 限制砝码最多10个
+                experimentData.current.weightCount++;
+                experimentData.current.totalWeight += 5;
+                updateExperimentDisplay();
+                updateWeightsDisplay();
+            }
+        });
+
+        removeWeightBtn.addEventListener('click', () => {
+            if (experimentData.current.isExperimentRunning) return;
+            if (experimentData.current.weightCount > 0) {
+                experimentData.current.weightCount--;
+                experimentData.current.totalWeight -= 5;
+                updateExperimentDisplay();
+                updateWeightsDisplay();
+            }
+        });
+
+        materialBtns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                if (experimentData.current.isExperimentRunning) return;
+                const material = btn.dataset.material;
+                experimentData.current.material = material;
+                updateExperimentDisplay();
+            });
+        });
+
+        startBtn.addEventListener('click', runExperiment);
+        resetBtn.addEventListener('click', resetExperiment);
+        saveResultBtn.addEventListener('click', saveResult);
+        clearResultsBtn.addEventListener('click', () => {
+            experimentData.results = [];
+            updateResultsTable();
+        });
+        checkAnswersBtn.addEventListener('click', checkAnswers);
+        decreasePullForceBtn.addEventListener('click', () => {
+            if (experimentData.current.isExperimentRunning) return;
+            if (experimentData.current.pullForce > 0) {
+                experimentData.current.pullForce -= 0.1;
+                updateExperimentDisplay();
+            }
+        });
+        increasePullForceBtn.addEventListener('click', () => {
+            if (experimentData.current.isExperimentRunning) return;
+            if (experimentData.current.pullForce < 10) {
+                experimentData.current.pullForce += 0.1;
+                updateExperimentDisplay();
+            }
+        });
+    </script>
+</html>
